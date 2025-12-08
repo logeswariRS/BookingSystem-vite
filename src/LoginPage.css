@@ -1,0 +1,122 @@
+/* Global styles for login and signup pages */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f0f4f8;
+    margin: 0;
+    padding: 0;
+}
+
+input, button {
+    font-family: 'Arial', sans-serif;
+}
+
+/* Login/SignUp container */
+.login-containerr {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 650px;
+    height: 100vh;
+    background: linear-gradient(135deg, #006f70, #00bcd4);
+}
+
+/* Box for form */
+.login-box, .signup-box {
+    background-color: rgb(255, 255, 255);
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+    width: 350px;
+    text-align: center;
+}
+
+/* Form Heading */
+.login-box h2 {
+    margin-bottom: 20px;
+    font-size: 24px;
+    font-weight: 600;
+    color: #ff7e5f;
+}
+
+/* Input fields */
+.input-field {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.input-field label {
+    font-size: 14px;
+    color: #ff7e5f;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.input-field input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 16px;
+    margin-top: 5px;
+}
+
+.input-field input:focus {
+    border-color: #4CAF50;
+    outline: none;
+}
+
+/* Buttons */
+button {
+    width: 100%;
+    padding: 12px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+/* button:hover {
+    background-color: #45a049;
+} */
+
+.login-buttonn {
+    background-color:  #ff7e5f;
+}
+
+.login-button:hover {
+    background-color: #dfb464;
+}
+
+.signup-button {
+    background-color: #4CAF50;
+}
+
+.signup-button:hover {
+    background-color: #45a049;
+}
+
+/* Footer Link (Switch between Login and SignUp) */
+.signup-link, .login-link {
+    margin-top: 15px;
+    font-size: 14px;
+    color: #555;
+}
+
+.signup-link p, .login-link p {
+    margin-bottom: 5px;
+}
+
+.signup-link button, .login-link button {
+    background-color: transparent;
+    color: #4CAF50;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.signup-link button:hover, .login-link button:hover {
+    text-decoration: underline;
+}

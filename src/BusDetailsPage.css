@@ -1,0 +1,107 @@
+/* BusDetailsPage.css */
+
+/* Container for the bus details */
+.bus-details-container {
+    padding: 20px;
+    background-color: #f4f4f9;
+    min-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+/* Title of the page */
+.page-title {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+/* Flex container for the bus cards */
+.bus-list {
+    display: flex;
+    flex-wrap: wrap;  /* Ensures the cards wrap into the next row */
+    gap: 20px;        /* Space between cards */
+    justify-content: center; /* Aligns the cards centrally */
+    width: 100%;
+    max-width: 1200px;
+    margin-top: 30px;
+}
+
+/* Each bus card container */
+.bus-card {
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: calc(50% - 20px);  /* Makes each bus card take up 50% of the container width */
+    min-width: 250px;  /* Minimum width for responsiveness */
+    box-sizing: border-box; /* Ensures padding doesn't affect width */
+}
+
+/* Bus information section */
+.bus-info h3 {
+    font-size: 1.6rem;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.bus-info p {
+    font-size: 1rem;
+    margin: 5px 0;
+    color: #666;
+}
+
+/* Book Now button */
+.book-button {
+    background-color:  #ff7e5f;
+    color: #fff;
+    font-size: 1.1rem;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-top: 15px;
+    text-align: center;
+}
+
+.book-button:hover {
+    background-color: #6a82fb;
+}
+
+/* No buses found message */
+.no-results {
+    font-size: 1.2rem;
+    color: #777;
+    text-align: center;
+}
+
+/* Back to Search button */
+.back-button {
+    background-color: #f1f1f1;
+    color: #333;
+    font-size: 1.1rem;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: background-color 0.3s ease;
+}
+
+.back-button:hover {
+    background-color: #e0e0e0;
+}
+
+/* Media Query for small screens */
+@media (max-width: 768px) {
+    .bus-card {
+        width: calc(100% - 20px);  /* On smaller screens, each card takes full width */
+    }
+}

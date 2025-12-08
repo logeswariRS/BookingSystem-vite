@@ -1,0 +1,226 @@
+/* General Styles */
+body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #006f70, #00bcd4);/* Calming green to blue gradient */
+    color: #333;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-size: 400% 400%;
+    animation: gradientAnim 12s ease infinite; /* Animated background */
+}
+
+/* Main container */
+.home-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 40px 20px;
+    background: linear-gradient(135deg, #006f70, #00bcd4); /* Cool blue to teal gradient */
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    color: #fff;
+    font-family: 'Arial', sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    animation: slideIn 1s ease-out;
+}
+
+/* Left section with features */
+.left-section {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    max-width: 400px;
+    padding-left: 20px;
+    animation: fadeInLeft 1s ease-out;
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 20px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease-in-out;
+    animation: fadeIn 1s ease-out;
+}
+
+.feature-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.feature-icon {
+    font-size: 2.5rem;
+    color: #fffbf0;
+    transition: color 0.3s ease;
+}
+
+.feature-item:hover .feature-icon {
+    color: #ff9e00; /* Goldish hover color */
+}
+
+.feature-item h3 {
+    font-size: 1.4rem;
+    margin: 0;
+    font-weight: 600;
+}
+
+.feature-item p {
+    font-size: 1rem;
+    color: #fff;
+    margin: 5px 0;
+}
+
+/* Right section with heading and start button */
+.right-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 20px;
+    max-width: 450px;
+    padding-right: 20px;
+    animation: fadeInRight 1s ease-out;
+}
+
+.bus-icon {
+    font-size: 4rem;
+    background: #fff;
+    padding: 20px;
+    border-radius: 50%;
+    color: #4e9f3d; /* Greenish color */
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    animation: bounce 2s infinite;
+}
+
+.bus-icon:hover {
+    transform: scale(1.1);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.main-heading {
+    font-size: 3rem;
+    font-weight: 700;
+    color: #fffbf0;
+    letter-spacing: 1px;
+    animation: fadeInUp 1.5s ease-out;
+}
+
+.sub-heading {
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: #fffbf0;
+    margin-top: 10px;
+    opacity: 0.8;
+    animation: fadeInUp 1.5s ease-out;
+}
+
+/* Start Button */
+.start-button {
+    background-color: #ff7e5f; /* Gold button */
+    color: #fff;
+    font-size: 1.2rem;
+    padding: 15px 25px;
+    border-radius: 12px;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    width: 200px;
+    text-align: center;
+    animation: fadeInUp 2s ease-out;
+}
+
+.start-button:hover {
+    background-color: #ff6a00;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInLeft {
+    0% {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeInRight {
+    0% {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    0% {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes bounce {
+    0% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+    100% {
+        transform: translateY(0);
+    }
+}
+
+@keyframes gradientAnim {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
