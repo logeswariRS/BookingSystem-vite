@@ -7,6 +7,7 @@ import BusSeatingPage from './BusSeatingPage';
 import BusCheckoutPage from './BusCheckoutPage';
 import LoginPage from './LoginPage';
 import SignupPage from './SignupPage';
+import Dashboard from './Dashboard';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
       <div className="app-container">
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/busbookingpage" element={<BusBookingPage />} />
           <Route path="/bus-details" element={<BusDetailsPage />} />
           <Route path="/bus-seating" element={<BusSeatingPage />} />

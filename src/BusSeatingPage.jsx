@@ -68,7 +68,8 @@ const BusSeatingPage = () => {
                     price: selectedBus.price,
                     seats: selectedSeats,  // Pass the selected seats
                     email,
-                    username
+                    username,
+                    selectedBus: selectedBus  // Pass the full bus object for integrated booking
                 }
             });
             

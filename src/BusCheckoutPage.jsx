@@ -1,46 +1,24 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import QRCode from "qrcode";
 import { FaBus } from 'react-icons/fa';
-import emailjs from 'emailjs-com';
+import { integratedBooking } from './services/bookingService';
+import { formatSeatNumbers } from './utils/seatUtils';
 import "./BusCheckoutPage.css";
 
 function BusCheckoutPage() {
     const location = useLocation();
-    const { from, to, date, time, price, seats, email, username } = location.state;
+    const { from, to, date, time, price, seats, email, username, selectedBus } = location.state || {};
     const qrCanvasRef = useRef(null);
-
-    const sendEmail = (recipientEmail) => {
-        const templateParams = {
-            to_email: recipientEmail,
-            from_name: 'Logeswari Ravi',
-            reply_to: recipientEmail,
-            message: `Bus Ticket Details:\n
-                      Name: ${username}\n
-                      From: ${from}\n
-                      To: ${to}\n
-                      Date: ${date}\n
-                      Time: ${time}\n
-                      Price: ₹${price}\n
-                      Seat Numbers: ${seats.map(seat => `Row: ${seat.row + 1}, Col: ${seat.col + 1}`).join(", ")}`,
-        };
-    
-        emailjs.send('service_7ihtz9y', 'template_avgn90f', templateParams, 'gcqIsQDMHP1koEUWh')
-            .then((response) => {
-                console.log('Email sent successfully:', response);
-            })
-            .catch((error) => {
-                console.error('Error sending email:', error);
-                alert('Failed to send email. Please try again later.');
-            });
-    };
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [bookingStatus, setBookingStatus] = useState('');
 
     useEffect(() => {
         const generateQRCode = async () => {
             try {
                 await QRCode.toCanvas(
                     qrCanvasRef.current,
-                    `Bus Ticket\nFrom: ${from}\nTo: ${to}\nDate: ${date}\nTime: ${time}\nPrice: ₹${price}\nSeat Numbers: ${seats.map(seat => `Row: ${seat.row + 1}, Col: ${seat.col + 1}`).join(", ")}`,
+                    `Bus Ticket\nFrom: ${from}\nTo: ${to}\nDate: ${date}\nTime: ${time}\nPrice: ₹${price}\nSeat Numbers: ${formatSeatNumbers(seats)}`,
                     { width: 150 }
                 );
             } catch (err) {
@@ -52,44 +30,50 @@ function BusCheckoutPage() {
     }, [from, to, date, time, price, seats]);
 
     const handleConfirmBooking = async () => {
-        const formattedDate = new Date(date).toISOString().slice(0, 19).replace('T', ' ');
-    
-      
+        if (!from || !to || !date || !time || !price || !seats || !email || !username) {
+            alert('Missing booking information. Please go back and try again.');
+            return;
+        }
+
+        setIsProcessing(true);
+        setBookingStatus('🔄 Processing your booking...');
+
         try {
-            const response = await fetch('http://localhost:5000/api/bookings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
+            // Use integrated booking service
+            const result = await integratedBooking({
+                source: from,
+                destination: to,
+                date,
+                email,
+                username,
+                selectedBus: selectedBus || {
+                    from,
+                    to,
+                    date,
+                    time,
+                    price,
+                    id: `bus-${Date.now()}`,
                 },
-                body: JSON.stringify({
-                    name: username,   
-                    email,           
-                    from,             
-                    to,               
-                    date: formattedDate,  
-                    time,             
-                    price,            
-                    seats,        
-                }),
+                selectedSeats: seats,
             });
-    
-            if (response.ok) {
-                console.log('Booking saved successfully to the database');
+
+            if (result.success && result.booking) {
+                setBookingStatus('✅ Booking confirmed! Email sent successfully.');
+            } else if (result.success) {
+                setBookingStatus('✅ Booking processed. Email sent.');
             } else {
-                console.error('Failed to save booking to the database');
+                setBookingStatus(`❌ ${result.message || 'Booking failed. Email notification sent.'}`);
             }
         } catch (error) {
-            console.error('Error while saving booking to the database:', error);
+            console.error('Error in booking:', error);
+            setBookingStatus('❌ An error occurred. Please try again.');
+        } finally {
+            setIsProcessing(false);
         }
-    
-       
-        sendEmail(email); 
     };
     
  
-    const seatNumbers = seats.map((seat, index) => {
-        return `Row: ${seat.row + 1}, Col: ${seat.col + 1}`;
-    }).join(", ");
+    const seatNumbers = formatSeatNumbers(seats);
 
 
     return (
@@ -129,8 +113,17 @@ function BusCheckoutPage() {
             </div>
         </div>
         <div className="email-section">
-            <button className="confirm-button" onClick={handleConfirmBooking}>
-                Confirm Booking and Send Email
+            {bookingStatus && (
+                <div className={`booking-status ${bookingStatus.includes('✅') ? 'success' : bookingStatus.includes('❌') ? 'error' : 'info'}`}>
+                    {bookingStatus}
+                </div>
+            )}
+            <button 
+                className="confirm-button" 
+                onClick={handleConfirmBooking}
+                disabled={isProcessing}
+            >
+                {isProcessing ? 'Processing...' : 'Confirm Booking and Send Email'}
             </button>
         </div>
     </div>

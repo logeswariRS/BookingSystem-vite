@@ -121,9 +121,239 @@
     transition: all 0.3s ease;
 }
 
-.search-button:hover {
+.search-button:hover:not(:disabled) {
     background: #e76b4b;
     transform: scale(1.05);
+}
+
+.search-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.search-button .spinner {
+    animation: spin 1s linear infinite;
+}
+
+/* Booking Options */
+.booking-options {
+    margin: 15px 0;
+    text-align: left;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: #444;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+/* Booking Status */
+.booking-status {
+    margin-top: 15px;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 500;
+    animation: slideIn 0.3s ease;
+}
+
+.booking-status.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.booking-status.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.booking-status.info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+/* Integrated Booking Section */
+.integrated-booking-section {
+    margin-top: 25px;
+    padding-top: 25px;
+    border-top: 2px solid #eee;
+    text-align: left;
+}
+
+.integrated-booking-section h3 {
+    color: #ff7e5f;
+    margin-bottom: 15px;
+    font-size: 1.3rem;
+}
+
+.integrated-booking-section h4 {
+    color: #666;
+    margin: 20px 0 10px 0;
+    font-size: 1.1rem;
+}
+
+/* Buses List */
+.buses-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.bus-option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #f9f9f9;
+}
+
+.bus-option:hover {
+    border-color: #ff7e5f;
+    background: #fff5f3;
+}
+
+.bus-option.selected {
+    border-color: #ff7e5f;
+    background: #fff5f3;
+}
+
+.bus-option strong {
+    color: #333;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.bus-option p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.bus-option svg {
+    color: #ff7e5f;
+    font-size: 1.5rem;
+}
+
+/* Seat Selection */
+.seat-selection {
+    margin: 20px 0;
+}
+
+.seating-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin: 15px 0;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 8px;
+}
+
+.seat-mini {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    background: #fff;
+    color: #666;
+}
+
+.seat-mini.available:hover {
+    border-color: #ff7e5f;
+    background: #fff5f3;
+    transform: scale(1.05);
+}
+
+.seat-mini.selected {
+    background: #ff7e5f;
+    color: #fff;
+    border-color: #ff7e5f;
+}
+
+.selected-seats-info {
+    margin-top: 10px;
+    color: #666;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Integrated Book Button */
+.integrated-book-button {
+    width: 100%;
+    background: #28a745;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 14px 20px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    margin-top: 20px;
+}
+
+.integrated-book-button:hover:not(:disabled) {
+    background: #218838;
+    transform: scale(1.02);
+}
+
+.integrated-book-button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.integrated-book-button .spinner {
+    animation: spin 1s linear infinite;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .card {
+        max-width: 100%;
+        width: 100%;
+        padding: 20px;
+    }
+
+    .seating-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        padding: 10px;
+    }
+
+    .seat-mini {
+        font-size: 0.65rem;
+    }
+
+    .bus-option {
+        padding: 12px;
+    }
 }
 
 /* Animations */
@@ -135,5 +365,25 @@
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
     }
 }
