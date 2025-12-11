@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaSearch, FaCheckCircle, FaSpinner } from 'react-icons/fa';
+import { FaSearch, FaCheckCircle, FaSpinner, FaMapMarkerAlt, FaCalendarAlt, FaEnvelope, FaUser } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { integratedBooking } from './services/bookingService';
@@ -131,7 +131,12 @@ const BusBookingPage = () => {
                     // Small delay to show success message
                     setTimeout(() => {
                         navigate('/bus-details', {
-                            state: { buses, email, username },
+                            state: { 
+                                buses, 
+                                email, 
+                                username,
+                                searchParams: { source, destination, date }
+                            },
                         });
                     }, 500);
                 }
@@ -306,7 +311,10 @@ const BusBookingPage = () => {
                 <h2>Plan Your Journey</h2>
                 <div className="input-group">
                     <div className="input-fieldb">
-                        <label>From Location</label>
+                        <label>
+                            <FaMapMarkerAlt style={{ marginRight: '8px', color: '#667eea' }} />
+                            From Location
+                        </label>
                         <input
                             type="text"
                             value={source}
@@ -329,7 +337,10 @@ const BusBookingPage = () => {
                     </div>
 
                     <div className="input-fieldb">
-                        <label>To Location</label>
+                        <label>
+                            <FaMapMarkerAlt style={{ marginRight: '8px', color: '#764ba2' }} />
+                            To Location
+                        </label>
                         <input
                             type="text"
                             value={destination}
@@ -352,7 +363,10 @@ const BusBookingPage = () => {
                     </div>
 
                     <div className="input-fieldb">
-                        <label>Date</label>
+                        <label>
+                            <FaCalendarAlt style={{ marginRight: '8px', color: '#667eea' }} />
+                            Date
+                        </label>
                         <input
                             type="date"
                             value={date}
@@ -361,7 +375,10 @@ const BusBookingPage = () => {
                     </div>
 
                     <div className="input-fieldb">
-                        <label>Email</label>
+                        <label>
+                            <FaEnvelope style={{ marginRight: '8px', color: '#667eea' }} />
+                            Email
+                        </label>
                         <input
                             type="email"
                             value={email}
@@ -372,7 +389,10 @@ const BusBookingPage = () => {
                     </div>
 
                     <div className="input-fieldb">
-                        <label>Username</label>
+                        <label>
+                            <FaUser style={{ marginRight: '8px', color: '#667eea' }} />
+                            Username
+                        </label>
                         <input
                             type="text"
                             value={username}

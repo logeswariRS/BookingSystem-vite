@@ -40,12 +40,12 @@ const HomePage = () => {
             </div>
 
             <div className="right-section">
-                <div className="bus-icon animate-right">🚌</div>
-                <h1 className="main-heading animate-fade-in">We're going on a trip.</h1>
-                <p className="sub-heading animate-fade-in">Plan your journey with ease.</p>
+                <div className="bus-icon">🚌</div>
+                <h1 className="main-heading">We're going on a trip.</h1>
+                <p className="sub-heading">Plan your journey with ease and book your perfect seat</p>
 
                 {/* "Get Started" button */}
-                <button className="start-button animate-bounce" onClick={handleStartClick}>
+                <button className="start-button" onClick={handleStartClick}>
                     Get Started
                 </button>
             </div>

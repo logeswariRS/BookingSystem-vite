@@ -48,3 +48,4 @@ export const parseSeatNumber = (seatNumber) => {
   return { row, col };
 };
 
+

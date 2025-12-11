@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import QRCode from "qrcode";
-import { FaBus } from 'react-icons/fa';
+import { FaBus, FaMapMarkerAlt, FaCalendarAlt, FaClock, FaTag, FaCheckCircle, FaUser, FaTicketAlt } from 'react-icons/fa';
 import { integratedBooking } from './services/bookingService';
 import { formatSeatNumbers } from './utils/seatUtils';
 import "./BusCheckoutPage.css";
@@ -16,10 +16,12 @@ function BusCheckoutPage() {
     useEffect(() => {
         const generateQRCode = async () => {
             try {
+                const numberOfSeats = seats ? seats.length : 0;
+                const totalPrice = (price || 0) * numberOfSeats;
                 await QRCode.toCanvas(
                     qrCanvasRef.current,
-                    `Bus Ticket\nFrom: ${from}\nTo: ${to}\nDate: ${date}\nTime: ${time}\nPrice: ₹${price}\nSeat Numbers: ${formatSeatNumbers(seats)}`,
-                    { width: 150 }
+                    `Bus Ticket\nFrom: ${from}\nTo: ${to}\nDate: ${date}\nTime: ${time}\nSeats: ${numberOfSeats}\nPrice per Seat: ₹${price}\nTotal Price: ₹${totalPrice}\nSeat Numbers: ${formatSeatNumbers(seats)}`,
+                    { width: 200 }
                 );
             } catch (err) {
                 console.error("Failed to generate QR code:", err);
@@ -39,7 +41,6 @@ function BusCheckoutPage() {
         setBookingStatus('🔄 Processing your booking...');
 
         try {
-            // Use integrated booking service
             const result = await integratedBooking({
                 source: from,
                 destination: to,
@@ -72,66 +73,154 @@ function BusCheckoutPage() {
         }
     };
     
- 
     const seatNumbers = formatSeatNumbers(seats);
-
+    const numberOfSeats = seats ? seats.length : 0;
+    const seatPrice = price || 0;
+    const totalPrice = seatPrice * numberOfSeats;
 
     return (
-<div className="checkout-page">
-
-    <div className="checkout-container">
-    <div className="thank-you-message">
-            <h1>Thank you, {username}!</h1>
-        </div>
-        <div className="details-card">
-            <div className="top-section">
-                <h2>Booking Details</h2>
-            </div>
-           
-            <div className="bus-info">
-                <span className="from">{from}</span>
-                <FaBus className="bus-icon" />
-                <span className="to">{to}</span>
-            </div>
-            <div className="details">
-            <div className="details-column left">
-                    <p><strong>From:</strong> {from}</p>
-                    <p><strong>Date:</strong> {date}</p>
-                    <p><strong>Price:</strong> ₹{price}</p>
-                    
+        <div className="checkout-page">
+            <div className="checkout-container">
+                {/* Header Section */}
+                <div className="checkout-header">
+                    <div className="header-icon">
+                        <FaTicketAlt />
+                    </div>
+                    <h1 className="checkout-title">Booking Confirmation</h1>
+                    <p className="checkout-subtitle">Review your booking details before confirming</p>
                 </div>
-                <div className="details-column right">
-                    <p><strong>To:</strong> {to}</p>
-                    <p><strong>Time:</strong> {time}</p>
-                    
-                    <p><strong>Seat Numbers:</strong> {seatNumbers || 'Not Selected'}</p>
+
+                {/* Main Content */}
+                <div className="checkout-content">
+                    {/* Journey Details Card */}
+                    <div className="journey-card">
+                        <div className="card-header">
+                            <FaBus className="card-icon" />
+                            <h2>Journey Details</h2>
+                        </div>
+                        <div className="route-display">
+                            <div className="route-point">
+                                <FaMapMarkerAlt className="route-icon from-icon" />
+                                <div className="route-info">
+                                    <span className="route-label">From</span>
+                                    <span className="route-city">{from}</span>
+                                </div>
+                            </div>
+                            <div className="route-line">
+                                <FaBus />
+                            </div>
+                            <div className="route-point">
+                                <FaMapMarkerAlt className="route-icon to-icon" />
+                                <div className="route-info">
+                                    <span className="route-label">To</span>
+                                    <span className="route-city">{to}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Booking Information Card */}
+                    <div className="info-card">
+                        <div className="card-header">
+                            <FaUser className="card-icon" />
+                            <h2>Booking Information</h2>
+                        </div>
+                        <div className="info-grid">
+                            <div className="info-item">
+                                <FaCalendarAlt className="info-icon" />
+                                <div className="info-content">
+                                    <span className="info-label">Date</span>
+                                    <span className="info-value">{date}</span>
+                                </div>
+                            </div>
+                            <div className="info-item">
+                                <FaClock className="info-icon" />
+                                <div className="info-content">
+                                    <span className="info-label">Time</span>
+                                    <span className="info-value">{time}</span>
+                                </div>
+                            </div>
+                            <div className="info-item">
+                                <FaUser className="info-icon" />
+                                <div className="info-content">
+                                    <span className="info-label">Passenger</span>
+                                    <span className="info-value">{username}</span>
+                                </div>
+                            </div>
+                            <div className="info-item">
+                                <FaTicketAlt className="info-icon" />
+                                <div className="info-content">
+                                    <span className="info-label">Seats</span>
+                                    <span className="info-value">{seatNumbers || 'Not Selected'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Price Summary Card */}
+                    <div className="price-card">
+                        <div className="card-header">
+                            <FaTag className="card-icon" />
+                            <h2>Price Summary</h2>
+                        </div>
+                        <div className="price-details">
+                            <div className="price-row">
+                                <span className="price-label">Price per Seat</span>
+                                <span className="price-value">₹{seatPrice}</span>
+                            </div>
+                            <div className="price-row">
+                                <span className="price-label">Number of Seats</span>
+                                <span className="price-value">{numberOfSeats}</span>
+                            </div>
+                            <div className="price-divider"></div>
+                            <div className="price-row total">
+                                <span className="price-label">Total Amount</span>
+                                <span className="price-value">₹{totalPrice}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* QR Code Section */}
+                    <div className="qr-card">
+                        <div className="card-header">
+                            <FaTicketAlt className="card-icon" />
+                            <h2>Digital Ticket</h2>
+                        </div>
+                        <div className="qr-container">
+                            <canvas id="qr-code" ref={qrCanvasRef}></canvas>
+                            <p className="qr-caption">Scan QR code to access your ticket</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Action Section */}
+                <div className="action-section">
+                    {bookingStatus && (
+                        <div className={`booking-status ${bookingStatus.includes('✅') ? 'success' : bookingStatus.includes('❌') ? 'error' : 'info'}`}>
+                            {bookingStatus}
+                        </div>
+                    )}
+                    <button 
+                        className="confirm-button" 
+                        onClick={handleConfirmBooking}
+                        disabled={isProcessing}
+                    >
+                        {isProcessing ? (
+                            <>
+                                <span className="spinner"></span>
+                                Processing...
+                            </>
+                        ) : (
+                            <>
+                                <FaCheckCircle />
+                                Confirm Booking & Send Email
+                            </>
+                        )}
+                    </button>
                 </div>
             </div>
-            <div className="qr-section">
-                <canvas id="qr-code" ref={qrCanvasRef}></canvas>
-                <p className="qr-caption">Scan this QR code to access ticket details</p>
-            </div>
         </div>
-        <div className="email-section">
-            {bookingStatus && (
-                <div className={`booking-status ${bookingStatus.includes('✅') ? 'success' : bookingStatus.includes('❌') ? 'error' : 'info'}`}>
-                    {bookingStatus}
-                </div>
-            )}
-            <button 
-                className="confirm-button" 
-                onClick={handleConfirmBooking}
-                disabled={isProcessing}
-            >
-                {isProcessing ? 'Processing...' : 'Confirm Booking and Send Email'}
-            </button>
-        </div>
-    </div>
-</div>
-
-
     );
 }
 
 export default BusCheckoutPage;
-
