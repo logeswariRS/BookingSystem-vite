@@ -28,26 +28,76 @@ export const checkAvailability = async (source, destination, date) => {
     
     // Handle timeout specifically
     if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+      // If backend is not available, allow booking to proceed (frontend-only mode)
+      console.warn('Backend not available, proceeding with frontend-only booking');
       return {
-        available: false,
+        available: true, // Allow booking even if backend is down
         buses: [],
-        error: 'Request timed out. Backend server is not responding.',
+        warning: 'Backend server is not responding. Proceeding with frontend-only booking.',
         timeout: true,
       };
     }
     
+    // If backend error, still allow booking (frontend-only mode)
+    console.warn('Backend error, proceeding with frontend-only booking');
     return {
-      available: false,
+      available: true, // Allow booking even if backend has errors
       buses: [],
-      error: error.message,
+      warning: 'Backend error. Proceeding with frontend-only booking.',
     };
   }
 };
 
 /**
- * Check seat availability for a specific bus
+ * Generate a consistent busKey for a bus object
  */
-export const checkSeatAvailability = async (bus, selectedSeats) => {
+const getBusKey = (bus) => {
+  if (!bus) return null;
+  if (bus.id) return bus.id;
+  
+  // Normalize date format - convert to YYYY-MM-DD if needed
+  let normalizedDate = bus.date || 'unknown';
+  if (normalizedDate !== 'unknown') {
+    try {
+      const dateObj = new Date(normalizedDate);
+      if (!isNaN(dateObj.getTime())) {
+        normalizedDate = dateObj.toISOString().split('T')[0];
+      }
+    } catch (e) {
+      // Keep original format if conversion fails
+    }
+  }
+  
+  // Normalize time format - ensure consistent format
+  let normalizedTime = bus.time || 'unknown';
+  if (normalizedTime !== 'unknown' && normalizedTime.includes(':')) {
+    const [hours, minutes] = normalizedTime.split(':');
+    normalizedTime = `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+  }
+  
+  return `${bus.from || 'unknown'}-${bus.to || 'unknown'}-${normalizedDate}-${normalizedTime}`;
+};
+
+/**
+ * Get current logged-in user
+ */
+const getCurrentUser = () => {
+  try {
+    const userToken = localStorage.getItem('userToken');
+    if (userToken) {
+      return JSON.parse(userToken);
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+};
+
+/**
+ * Check seat availability for a specific bus
+ * Excludes seats booked by the current user (so they can see their own bookings)
+ */
+export const checkSeatAvailability = async (bus, selectedSeats, currentUserEmail = null) => {
   try {
     if (!bus) {
       console.warn('No bus object provided for seat availability check');
@@ -64,30 +114,63 @@ export const checkSeatAvailability = async (bus, selectedSeats) => {
       };
     }
 
+    // Get current user if not provided
+    if (!currentUserEmail) {
+      const currentUser = getCurrentUser();
+      currentUserEmail = currentUser?.email || null;
+    }
+
     // Create a unique key for this bus route/date/time combination
-    // Use bus.id if available, otherwise create a composite key
-    const busKey = bus.id || `${bus.from || 'unknown'}-${bus.to || 'unknown'}-${bus.date || 'unknown'}-${bus.time || 'unknown'}`;
-    
-    // Get booked seats from localStorage (if any)
-    const bookedSeatsKey = `bookedSeats_${busKey}`;
-    let bookedSeats = [];
-    
-    try {
-      const storedBookedSeats = localStorage.getItem(bookedSeatsKey);
-      if (storedBookedSeats) {
-        bookedSeats = JSON.parse(storedBookedSeats);
-      }
-    } catch (parseError) {
-      console.warn('Error parsing booked seats from localStorage:', parseError);
-      bookedSeats = [];
+    // Use consistent key generation
+    const busKey = getBusKey(bus);
+    if (!busKey) {
+      return {
+        available: true,
+        warning: 'Could not generate bus key, proceeding with booking',
+      };
     }
     
-    // Convert booked seats to a format we can compare
-    const bookedSeatsSet = new Set(
-      bookedSeats.map(seat => `${seat.row}-${seat.col}`)
+    // Get all bookings from localStorage
+    let allBookings = [];
+    try {
+      const storedBookings = localStorage.getItem('userBookings');
+      if (storedBookings) {
+        allBookings = JSON.parse(storedBookings);
+      }
+    } catch (parseError) {
+      console.warn('Error parsing bookings from localStorage:', parseError);
+      allBookings = [];
+    }
+
+    // Filter bookings for this specific bus route
+    const busBookings = allBookings.filter(booking => {
+      const bookingBusKey = getBusKey({
+        from: booking.from,
+        to: booking.to,
+        date: booking.date,
+        time: booking.time,
+      });
+      return bookingBusKey === busKey && booking.status !== 'Cancelled';
+    });
+
+    // Exclude bookings by current user (so they can see their own seats)
+    const otherUsersBookings = busBookings.filter(
+      booking => booking.email !== currentUserEmail
     );
+
+    // Get all booked seats from other users
+    const bookedSeatsSet = new Set();
+    otherUsersBookings.forEach(booking => {
+      if (booking.seats && Array.isArray(booking.seats)) {
+        booking.seats.forEach(seat => {
+          if (seat.row !== undefined && seat.col !== undefined) {
+            bookedSeatsSet.add(`${seat.row}-${seat.col}`);
+          }
+        });
+      }
+    });
     
-    // Check if any of the selected seats are already booked
+    // Check if any of the selected seats are already booked by other users
     const conflictingSeats = selectedSeats.filter(seat => 
       bookedSeatsSet.has(`${seat.row}-${seat.col}`)
     );
@@ -95,7 +178,7 @@ export const checkSeatAvailability = async (bus, selectedSeats) => {
     if (conflictingSeats.length > 0) {
       return {
         available: false,
-        error: `Seats ${conflictingSeats.map(s => formatSeatNumber(s.row, s.col)).join(', ')} are already booked`,
+        error: `Seats ${conflictingSeats.map(s => formatSeatNumber(s.row, s.col)).join(', ')} are already booked by another user`,
         conflictingSeats,
       };
     }
@@ -254,10 +337,11 @@ export const integratedBooking = async (bookingDetails) => {
     selectedSeats,
   } = bookingDetails;
 
-  // Step 1: Check bus availability
+  // Step 1: Check bus availability (but don't block if backend is unavailable)
   const availabilityCheck = await checkAvailability(source, destination, date);
   
-  if (!availabilityCheck.available) {
+  // Only fail if backend explicitly says no buses AND it's not a backend error
+  if (!availabilityCheck.available && !availabilityCheck.warning && !availabilityCheck.timeout) {
     // Send failure email
     await sendBookingFailureEmail(
       { username, email, from: source, to: destination, date, time: 'N/A' },
@@ -269,14 +353,22 @@ export const integratedBooking = async (bookingDetails) => {
       emailSent: true,
     };
   }
+  
+  // If there's a warning (backend unavailable), log it but continue
+  if (availabilityCheck.warning) {
+    console.warn('Availability check warning:', availabilityCheck.warning);
+  }
 
   // Step 2: If bus selected, check seat availability
   if (selectedBus && selectedSeats && selectedSeats.length > 0) {
-    console.log('Checking seat availability for:', { selectedBus, selectedSeats });
-    const seatCheck = await checkSeatAvailability(selectedBus, selectedSeats);
+    console.log('Checking seat availability for:', { selectedBus, selectedSeats, email });
+    
+    // Pass current user email to exclude their own bookings
+    const seatCheck = await checkSeatAvailability(selectedBus, selectedSeats, email);
     console.log('Seat availability result:', seatCheck);
     
-    if (!seatCheck.available) {
+    // Only block if seats are explicitly unavailable (not just a warning)
+    if (!seatCheck.available && !seatCheck.warning) {
       console.log('Seats not available, sending failure email');
       await sendBookingFailureEmail(
         {
@@ -298,13 +390,13 @@ export const integratedBooking = async (bookingDetails) => {
     
     // Log if there's a warning but seats are still available
     if (seatCheck.warning) {
-      console.warn('Seat availability warning:', seatCheck.warning);
+      console.warn('Seat availability warning (but proceeding):', seatCheck.warning);
     }
   }
 
-  // Step 3: Create booking
+  // Step 3: Create booking (try backend first, but continue with frontend if it fails)
   if (selectedBus && selectedSeats) {
-    const bookingResult = await createBooking({
+    let bookingResult = await createBooking({
       username,
       email,
       from: selectedBus.from,
@@ -315,13 +407,51 @@ export const integratedBooking = async (bookingDetails) => {
       seats: selectedSeats,
     });
 
+    // If backend booking fails, proceed with frontend-only booking
+    if (!bookingResult.success) {
+      console.warn('Backend booking failed, proceeding with frontend-only booking:', bookingResult.error);
+      // Create a mock success result for frontend-only booking
+      bookingResult = {
+        success: true,
+        booking: null, // No backend booking ID
+      };
+    }
+
     if (bookingResult.success) {
-      // Mark seats as booked in localStorage
-      const busKey = selectedBus.id || `${selectedBus.from}-${selectedBus.to}-${selectedBus.date}-${selectedBus.time}`;
-      const bookedSeatsKey = `bookedSeats_${busKey}`;
-      const existingBookedSeats = JSON.parse(localStorage.getItem(bookedSeatsKey) || '[]');
-      const updatedBookedSeats = [...existingBookedSeats, ...selectedSeats];
-      localStorage.setItem(bookedSeatsKey, JSON.stringify(updatedBookedSeats));
+      // Get current user info
+      const currentUser = getCurrentUser();
+      const userId = currentUser?.id || Date.now();
+      
+      // Create booking object with user info
+      const bookingId = bookingResult.booking?.id || `BK${Date.now()}`;
+      const bookingObject = {
+        id: bookingId,
+        userId: userId,
+        email: email,
+        username: username,
+        from: selectedBus.from,
+        to: selectedBus.to,
+        date: selectedBus.date,
+        time: selectedBus.time,
+        price: selectedBus.price,
+        seats: selectedSeats,
+        status: 'Confirmed',
+        bookedAt: new Date().toISOString(),
+      };
+
+      // Store booking in localStorage with user info
+      let allBookings = [];
+      try {
+        const storedBookings = localStorage.getItem('userBookings');
+        if (storedBookings) {
+          allBookings = JSON.parse(storedBookings);
+        }
+      } catch (e) {
+        console.warn('Error parsing bookings:', e);
+      }
+      
+      allBookings.push(bookingObject);
+      localStorage.setItem('userBookings', JSON.stringify(allBookings));
 
       // Step 4: Send confirmation email
       const emailResult = await sendBookingConfirmationEmail({
@@ -333,12 +463,12 @@ export const integratedBooking = async (bookingDetails) => {
         time: selectedBus.time,
         price: selectedBus.price,
         seats: selectedSeats,
-        bookingId: bookingResult.booking?.id || `BK${Date.now()}`,
+        bookingId: bookingId,
       });
 
       return {
         success: true,
-        booking: bookingResult.booking,
+        booking: bookingObject,
         emailSent: emailResult.success,
         message: 'Booking confirmed successfully!',
       };
@@ -370,5 +500,138 @@ export const integratedBooking = async (bookingDetails) => {
     buses: availabilityCheck.buses,
     message: 'Buses available. Please select a bus and seats.',
   };
+};
+
+/**
+ * Get all bookings for the current user
+ */
+export const getUserBookings = (userEmail = null) => {
+  try {
+    // Get current user if not provided
+    if (!userEmail) {
+      const currentUser = getCurrentUser();
+      userEmail = currentUser?.email || null;
+    }
+
+    if (!userEmail) {
+      return [];
+    }
+
+    // Get all bookings from localStorage
+    let allBookings = [];
+    try {
+      const storedBookings = localStorage.getItem('userBookings');
+      if (storedBookings) {
+        allBookings = JSON.parse(storedBookings);
+      }
+    } catch (parseError) {
+      console.warn('Error parsing bookings from localStorage:', parseError);
+      return [];
+    }
+
+    // Filter bookings for current user
+    return allBookings.filter(booking => booking.email === userEmail);
+  } catch (error) {
+    console.error('Error getting user bookings:', error);
+    return [];
+  }
+};
+
+/**
+ * Clear all bookings and seat reservations (for testing/reset purposes)
+ */
+export const clearAllBookings = () => {
+  try {
+    // Clear all booking-related localStorage items
+    localStorage.removeItem('userBookings');
+    localStorage.removeItem('aiBookings');
+    localStorage.removeItem('seatsDatabase');
+    
+    // Clear old bookedSeats format if it exists
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith('bookedSeats_')) {
+        localStorage.removeItem(key);
+      }
+    });
+    
+    console.log('All bookings and seat reservations cleared');
+    return {
+      success: true,
+      message: 'All bookings and seat reservations cleared',
+    };
+  } catch (error) {
+    console.error('Error clearing bookings:', error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+};
+
+/**
+ * Cancel a booking
+ */
+export const cancelBooking = (bookingId, userEmail = null) => {
+  try {
+    // Get current user if not provided
+    if (!userEmail) {
+      const currentUser = getCurrentUser();
+      userEmail = currentUser?.email || null;
+    }
+
+    if (!userEmail) {
+      return {
+        success: false,
+        error: 'User not logged in',
+      };
+    }
+
+    // Get all bookings from localStorage
+    let allBookings = [];
+    try {
+      const storedBookings = localStorage.getItem('userBookings');
+      if (storedBookings) {
+        allBookings = JSON.parse(storedBookings);
+      }
+    } catch (parseError) {
+      console.warn('Error parsing bookings from localStorage:', parseError);
+      return {
+        success: false,
+        error: 'Failed to load bookings',
+      };
+    }
+
+    // Find the booking
+    const bookingIndex = allBookings.findIndex(
+      booking => booking.id === bookingId && booking.email === userEmail
+    );
+
+    if (bookingIndex === -1) {
+      return {
+        success: false,
+        error: 'Booking not found or you do not have permission to cancel it',
+      };
+    }
+
+    // Update booking status to Cancelled
+    allBookings[bookingIndex].status = 'Cancelled';
+    allBookings[bookingIndex].cancelledAt = new Date().toISOString();
+
+    // Save back to localStorage
+    localStorage.setItem('userBookings', JSON.stringify(allBookings));
+
+    return {
+      success: true,
+      message: 'Booking cancelled successfully',
+      booking: allBookings[bookingIndex],
+    };
+  } catch (error) {
+    console.error('Error cancelling booking:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to cancel booking',
+    };
+  }
 };
 

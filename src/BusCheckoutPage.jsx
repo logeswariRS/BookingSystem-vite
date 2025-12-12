@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import QRCode from "qrcode";
 import { FaBus, FaMapMarkerAlt, FaCalendarAlt, FaClock, FaTag, FaCheckCircle, FaUser, FaTicketAlt } from 'react-icons/fa';
-import { integratedBooking } from './services/bookingService';
+import { integratedBooking, clearAllBookings } from './services/bookingService';
 import { formatSeatNumbers } from './utils/seatUtils';
 import "./BusCheckoutPage.css";
 
@@ -37,24 +37,33 @@ function BusCheckoutPage() {
             return;
         }
 
+        // Validate that we have a selectedBus
+        if (!selectedBus) {
+            alert('Bus information is missing. Please go back and select a bus again.');
+            return;
+        }
+
         setIsProcessing(true);
         setBookingStatus('🔄 Processing your booking...');
 
         try {
+            // Ensure selectedBus has all required fields
+            const busData = {
+                ...selectedBus,
+                from: selectedBus.from || from,
+                to: selectedBus.to || to,
+                date: selectedBus.date || date,
+                time: selectedBus.time || time,
+                price: selectedBus.price || price,
+            };
+
             const result = await integratedBooking({
                 source: from,
                 destination: to,
                 date,
                 email,
                 username,
-                selectedBus: selectedBus || {
-                    from,
-                    to,
-                    date,
-                    time,
-                    price,
-                    id: `bus-${Date.now()}`,
-                },
+                selectedBus: busData,
                 selectedSeats: seats,
             });
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiMenu, FiX } from 'react-icons/fi';
 import { BiSolidDashboard, BiUser } from 'react-icons/bi';
@@ -99,10 +99,36 @@ function Dashboard() {
           </button>
           <div className="header-right">
             <div className="user-info">
-              <img src="https://via.placeholder.com/40" alt="User" className="avatar" />
+              <div className="avatar-placeholder">
+                {(() => {
+                  const userToken = localStorage.getItem('userToken');
+                  if (userToken) {
+                    try {
+                      const user = JSON.parse(userToken);
+                      return user.name ? user.name.charAt(0).toUpperCase() : 'U';
+                    } catch (e) {
+                      return 'U';
+                    }
+                  }
+                  return 'U';
+                })()}
+              </div>
               <div className="user-details">
-                <p className="user-name">John Doe</p>
-                <p className="user-status">Premium Member</p>
+                <p className="user-name">
+                  {(() => {
+                    const userToken = localStorage.getItem('userToken');
+                    if (userToken) {
+                      try {
+                        const user = JSON.parse(userToken);
+                        return user.name || 'User';
+                      } catch (e) {
+                        return 'User';
+                      }
+                    }
+                    return 'User';
+                  })()}
+                </p>
+                <p className="user-status">Member</p>
               </div>
             </div>
           </div>
@@ -118,6 +144,78 @@ function Dashboard() {
 
 // Dashboard Overview Component
 function DashboardOverview() {
+  const [stats, setStats] = useState({
+    activeBookings: 0,
+    totalSpent: 0,
+    upcomingTrips: [],
+  });
+
+  useEffect(() => {
+    const loadStats = () => {
+      try {
+        const userToken = localStorage.getItem('userToken');
+        if (!userToken) return;
+
+        const user = JSON.parse(userToken);
+        if (!user.email) return;
+
+        // Get all bookings
+        let allBookings = [];
+        const storedBookings = localStorage.getItem('userBookings');
+        if (storedBookings) {
+          allBookings = JSON.parse(storedBookings);
+        }
+
+        // Filter user bookings
+        const userBookings = allBookings.filter(
+          booking => booking.email === user.email && booking.status !== 'Cancelled'
+        );
+
+        // Calculate stats
+        const activeBookings = userBookings.filter(b => b.status === 'Confirmed').length;
+        const totalSpent = userBookings.reduce((sum, b) => {
+          const price = b.price || 0;
+          const seatCount = Array.isArray(b.seats) ? b.seats.length : 1;
+          return sum + (price * seatCount);
+        }, 0);
+
+        // Get upcoming trips (confirmed bookings)
+        const upcomingTrips = userBookings
+          .filter(b => b.status === 'Confirmed')
+          .sort((a, b) => {
+            const dateA = new Date(a.date || 0);
+            const dateB = new Date(b.date || 0);
+            return dateA - dateB;
+          })
+          .slice(0, 2); // Show only 2 upcoming trips
+
+        setStats({
+          activeBookings,
+          totalSpent,
+          upcomingTrips,
+        });
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      }
+    };
+
+    loadStats();
+  }, []);
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    } catch (e) {
+      return dateString;
+    }
+  };
+
   return (
     <div className="dashboard-overview">
       <h1>Dashboard Overview</h1>
@@ -125,25 +223,25 @@ function DashboardOverview() {
       <div className="stats-grid">
         <StatCard 
           title="Active Bookings" 
-          value="3" 
+          value={stats.activeBookings.toString()} 
           icon="📅"
           color="blue"
         />
         <StatCard 
           title="Total Spent" 
-          value="₹4,500" 
+          value={`₹${stats.totalSpent.toLocaleString()}`} 
           icon="💰"
           color="green"
         />
         <StatCard 
-          title="Miles Traveled" 
-          value="1,250 km" 
+          title="Total Bookings" 
+          value={stats.activeBookings.toString()} 
           icon="🚌"
           color="purple"
         />
         <StatCard 
-          title="Loyalty Points" 
-          value="850" 
+          title="Status" 
+          value="Active" 
           icon="⭐"
           color="orange"
         />
@@ -152,33 +250,34 @@ function DashboardOverview() {
       <div className="dashboard-grid">
         <div className="card upcoming-trips">
           <h2>Upcoming Trips</h2>
-          <div className="trip-item">
-            <div className="trip-route">
-              <p className="route-from">Mumbai</p>
-              <div className="route-arrow">→</div>
-              <p className="route-to">Delhi</p>
-            </div>
-            <p className="trip-date">Dec 15, 2024 • 10:00 PM</p>
-            <p className="trip-status">Confirmed</p>
-          </div>
-          <div className="trip-item">
-            <div className="trip-route">
-              <p className="route-from">Delhi</p>
-              <div className="route-arrow">→</div>
-              <p className="route-to">Agra</p>
-            </div>
-            <p className="trip-date">Dec 20, 2024 • 6:00 AM</p>
-            <p className="trip-status">Confirmed</p>
-          </div>
-          <Link to="/bookings" className="view-all-link">View All</Link>
+          {stats.upcomingTrips.length === 0 ? (
+            <p className="no-trips">No upcoming trips. Book your first trip!</p>
+          ) : (
+            <>
+              {stats.upcomingTrips.map((trip) => (
+                <div key={trip.id} className="trip-item">
+                  <div className="trip-route">
+                    <p className="route-from">{trip.from}</p>
+                    <div className="route-arrow">→</div>
+                    <p className="route-to">{trip.to}</p>
+                  </div>
+                  <p className="trip-date">
+                    {formatDate(trip.date)} {trip.time ? `• ${trip.time}` : ''}
+                  </p>
+                  <p className="trip-status">{trip.status}</p>
+                </div>
+              ))}
+              <Link to="/dashboard" onClick={() => window.location.hash = '#bookings'} className="view-all-link">View All</Link>
+            </>
+          )}
         </div>
 
         <div className="card quick-actions">
           <h2>Quick Actions</h2>
           <div className="action-buttons">
-            <button className="action-btn primary">
+            <Link to="/busbookingpage" className="action-btn primary">
               🎫 Book New Trip
-            </button>
+            </Link>
             <button className="action-btn secondary">
               🔔 My Alerts
             </button>
@@ -193,30 +292,29 @@ function DashboardOverview() {
 
         <div className="card recent-activity">
           <h2>Recent Activity</h2>
-          <div className="activity-item">
-            <span className="activity-date">Today</span>
-            <p>Booked ticket from Mumbai to Delhi</p>
-          </div>
-          <div className="activity-item">
-            <span className="activity-date">2 days ago</span>
-            <p>Completed trip to Pune</p>
-          </div>
-          <div className="activity-item">
-            <span className="activity-date">5 days ago</span>
-            <p>Added new payment method</p>
-          </div>
+          {stats.upcomingTrips.length === 0 ? (
+            <p className="no-activity">No recent activity</p>
+          ) : (
+            stats.upcomingTrips.slice(0, 3).map((trip, index) => (
+              <div key={trip.id} className="activity-item">
+                <span className="activity-date">
+                  {index === 0 ? 'Recent' : formatDate(trip.bookedAt)}
+                </span>
+                <p>Booked ticket from {trip.from} to {trip.to}</p>
+              </div>
+            ))
+          )}
         </div>
 
         <div className="card wallet-section">
           <h2>Wallet & Offers</h2>
           <div className="wallet-info">
             <p>Available Balance</p>
-            <h3>₹500</h3>
+            <h3>₹0</h3>
             <button className="add-money-btn">Add Money</button>
           </div>
           <div className="offers-preview">
             <p className="offers-label">Active Offers</p>
-            <div className="offer-tag">Get 20% off on next booking</div>
             <div className="offer-tag">Free cancellation available</div>
           </div>
         </div>
@@ -240,11 +338,159 @@ function StatCard({ title, value, icon, color }) {
 
 // My Bookings Component
 function MyBookings() {
-  const bookings = [
-    { id: 1, from: 'Mumbai', to: 'Delhi', date: 'Dec 15, 2024', status: 'Confirmed', seats: 'A1, A2' },
-    { id: 2, from: 'Delhi', to: 'Agra', date: 'Dec 20, 2024', status: 'Confirmed', seats: 'B5' },
-    { id: 3, from: 'Bangalore', to: 'Hyderabad', date: 'Nov 30, 2024', status: 'Completed', seats: 'C3' },
-  ];
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [cancelStatus, setCancelStatus] = useState('');
+
+  // Get current user
+  const getCurrentUser = () => {
+    try {
+      const userToken = localStorage.getItem('userToken');
+      if (userToken) {
+        return JSON.parse(userToken);
+      }
+    } catch (e) {
+      // Ignore
+    }
+    return null;
+  };
+
+  // Load user bookings
+  React.useEffect(() => {
+    const loadBookings = () => {
+      setLoading(true);
+      try {
+        const currentUser = getCurrentUser();
+        if (!currentUser || !currentUser.email) {
+          setBookings([]);
+          setLoading(false);
+          return;
+        }
+
+        // Get all bookings from localStorage
+        let allBookings = [];
+        const storedBookings = localStorage.getItem('userBookings');
+        if (storedBookings) {
+          allBookings = JSON.parse(storedBookings);
+        }
+
+        // Filter bookings for current user and exclude cancelled
+        const userBookings = allBookings
+          .filter(booking => booking.email === currentUser.email)
+          .sort((a, b) => new Date(b.bookedAt || 0) - new Date(a.bookedAt || 0)); // Sort by most recent
+
+        setBookings(userBookings);
+      } catch (error) {
+        console.error('Error loading bookings:', error);
+        setBookings([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadBookings();
+  }, []);
+
+  // Format seat numbers
+  const formatSeatNumbers = (seats) => {
+    if (!seats || !Array.isArray(seats)) return 'N/A';
+    
+    const formatSeatNumber = (seat) => {
+      if (typeof seat === 'object' && seat.row !== undefined && seat.col !== undefined) {
+        const rowLetter = String.fromCharCode(65 + seat.row); // A, B, C, D
+        return `${rowLetter}${seat.col + 1}`;
+      }
+      return seat;
+    };
+
+    return seats.map(formatSeatNumber).join(', ');
+  };
+
+  // Format date
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    } catch (e) {
+      return dateString;
+    }
+  };
+
+  // Handle cancellation
+  const handleCancel = async (bookingId) => {
+    if (!window.confirm('Are you sure you want to cancel this booking?')) {
+      return;
+    }
+
+    setCancelStatus('🔄 Cancelling booking...');
+    
+    try {
+      const currentUser = getCurrentUser();
+      if (!currentUser || !currentUser.email) {
+        setCancelStatus('❌ User not logged in');
+        return;
+      }
+
+      // Get all bookings
+      let allBookings = [];
+      const storedBookings = localStorage.getItem('userBookings');
+      if (storedBookings) {
+        allBookings = JSON.parse(storedBookings);
+      }
+
+      // Find and update booking
+      const bookingIndex = allBookings.findIndex(
+        booking => booking.id === bookingId && booking.email === currentUser.email
+      );
+
+      if (bookingIndex === -1) {
+        setCancelStatus('❌ Booking not found');
+        return;
+      }
+
+      // Update status
+      allBookings[bookingIndex].status = 'Cancelled';
+      allBookings[bookingIndex].cancelledAt = new Date().toISOString();
+
+      // Save back
+      localStorage.setItem('userBookings', JSON.stringify(allBookings));
+
+      // Reload bookings
+      const userBookings = allBookings
+        .filter(booking => booking.email === currentUser.email)
+        .sort((a, b) => new Date(b.bookedAt || 0) - new Date(a.bookedAt || 0));
+
+      setBookings(userBookings);
+      setCancelStatus('✅ Booking cancelled successfully');
+      
+      // Clear status after 3 seconds
+      setTimeout(() => setCancelStatus(''), 3000);
+    } catch (error) {
+      console.error('Error cancelling booking:', error);
+      setCancelStatus('❌ Failed to cancel booking');
+      setTimeout(() => setCancelStatus(''), 3000);
+    }
+  };
+
+  const currentUser = getCurrentUser();
+
+  if (!currentUser) {
+    return (
+      <div className="my-bookings">
+        <div className="section-header">
+          <h1>My Bookings</h1>
+        </div>
+        <div className="no-bookings">
+          <p>Please log in to view your bookings.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="my-bookings">
@@ -253,95 +499,286 @@ function MyBookings() {
         <Link to="/busbookingpage" className="new-booking-btn">+ New Booking</Link>
       </div>
 
-      <div className="bookings-list">
-        {bookings.map((booking) => (
-          <div key={booking.id} className="booking-card">
-            <div className="booking-left">
-              <div className="booking-route">
-                <p className="from">{booking.from}</p>
-                <span className="arrow">→</span>
-                <p className="to">{booking.to}</p>
+      {cancelStatus && (
+        <div className={`cancel-status ${cancelStatus.includes('✅') ? 'success' : cancelStatus.includes('❌') ? 'error' : 'info'}`}>
+          {cancelStatus}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="loading">Loading bookings...</div>
+      ) : bookings.length === 0 ? (
+        <div className="no-bookings">
+          <p>You don't have any bookings yet.</p>
+          <Link to="/busbookingpage" className="new-booking-btn">Make Your First Booking</Link>
+        </div>
+      ) : (
+        <div className="bookings-list">
+          {bookings.map((booking) => (
+            <div key={booking.id} className="booking-card">
+              <div className="booking-left">
+                <div className="booking-route">
+                  <p className="from">{booking.from}</p>
+                  <span className="arrow">→</span>
+                  <p className="to">{booking.to}</p>
+                </div>
+                <p className="booking-date">{formatDate(booking.date)}</p>
+                {booking.time && <p className="booking-time">Time: {booking.time}</p>}
+                {booking.price && <p className="booking-price">Price: ₹{booking.price}</p>}
               </div>
-              <p className="booking-date">{booking.date}</p>
+              <div className="booking-middle">
+                <p className="booking-seats">Seats: {formatSeatNumbers(booking.seats)}</p>
+                <span className={`booking-status ${booking.status.toLowerCase()}`}>
+                  {booking.status}
+                </span>
+                {booking.bookedAt && (
+                  <p className="booking-time-small">
+                    Booked: {formatDate(booking.bookedAt)}
+                  </p>
+                )}
+              </div>
+              <div className="booking-right">
+                {booking.status === 'Confirmed' && (
+                  <button 
+                    className="action-link cancel-btn"
+                    onClick={() => handleCancel(booking.id)}
+                  >
+                    Cancel
+                  </button>
+                )}
+                {booking.status === 'Cancelled' && booking.cancelledAt && (
+                  <p className="cancelled-info">Cancelled on {formatDate(booking.cancelledAt)}</p>
+                )}
+              </div>
             </div>
-            <div className="booking-middle">
-              <p className="booking-seats">Seats: {booking.seats}</p>
-              <span className={`booking-status ${booking.status.toLowerCase()}`}>
-                {booking.status}
-              </span>
-            </div>
-            <div className="booking-right">
-              <button className="action-link">View Details</button>
-              <button className="action-link">Cancel</button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
 // Tickets Component
 function Tickets() {
-  const tickets = [
-    { id: 'TKT001', booking: 'Mumbai to Delhi', date: 'Dec 15, 2024', status: 'Active' },
-    { id: 'TKT002', booking: 'Delhi to Agra', date: 'Dec 20, 2024', status: 'Upcoming' },
-  ];
+  const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadTickets = () => {
+      setLoading(true);
+      try {
+        const userToken = localStorage.getItem('userToken');
+        if (!userToken) {
+          setTickets([]);
+          setLoading(false);
+          return;
+        }
+
+        const user = JSON.parse(userToken);
+        if (!user.email) {
+          setTickets([]);
+          setLoading(false);
+          return;
+        }
+
+        // Get all bookings
+        let allBookings = [];
+        const storedBookings = localStorage.getItem('userBookings');
+        if (storedBookings) {
+          allBookings = JSON.parse(storedBookings);
+        }
+
+        // Filter user bookings (only confirmed)
+        const userTickets = allBookings
+          .filter(booking => 
+            booking.email === user.email && 
+            booking.status === 'Confirmed'
+          )
+          .map(booking => ({
+            id: booking.id,
+            booking: `${booking.from} to ${booking.to}`,
+            date: booking.date,
+            time: booking.time,
+            status: 'Active',
+            seats: booking.seats,
+          }))
+          .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+        setTickets(userTickets);
+      } catch (error) {
+        console.error('Error loading tickets:', error);
+        setTickets([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTickets();
+  }, []);
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    } catch (e) {
+      return dateString;
+    }
+  };
 
   return (
     <div className="tickets">
       <h1>My Tickets</h1>
-      <div className="tickets-list">
-        {tickets.map((ticket) => (
-          <div key={ticket.id} className="ticket-card">
-            <div className="ticket-number">#{ticket.id}</div>
-            <div className="ticket-info">
-              <p className="ticket-booking">{ticket.booking}</p>
-              <p className="ticket-date">{ticket.date}</p>
+      {loading ? (
+        <div className="loading">Loading tickets...</div>
+      ) : tickets.length === 0 ? (
+        <div className="no-tickets">
+          <p>You don't have any active tickets.</p>
+        </div>
+      ) : (
+        <div className="tickets-list">
+          {tickets.map((ticket) => (
+            <div key={ticket.id} className="ticket-card">
+              <div className="ticket-number">#{ticket.id}</div>
+              <div className="ticket-info">
+                <p className="ticket-booking">{ticket.booking}</p>
+                <p className="ticket-date">{formatDate(ticket.date)} {ticket.time ? `• ${ticket.time}` : ''}</p>
+              </div>
+              <span className={`ticket-status ${ticket.status.toLowerCase()}`}>
+                {ticket.status}
+              </span>
+              <button className="download-btn">Download PDF</button>
             </div>
-            <span className={`ticket-status ${ticket.status.toLowerCase()}`}>
-              {ticket.status}
-            </span>
-            <button className="download-btn">Download PDF</button>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
 // Profile Component
 function Profile() {
+  const [user, setUser] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    city: '',
+  });
+
+  useEffect(() => {
+    const loadUser = () => {
+      try {
+        const userToken = localStorage.getItem('userToken');
+        if (userToken) {
+          const userData = JSON.parse(userToken);
+          setUser(userData);
+          setFormData({
+            name: userData.name || '',
+            email: userData.email || '',
+            phone: userData.phone || '',
+            city: userData.city || '',
+          });
+        }
+      } catch (error) {
+        console.error('Error loading user:', error);
+      }
+    };
+
+    loadUser();
+  }, []);
+
+  const handleSave = () => {
+    try {
+      // Update user in localStorage
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const userIndex = users.findIndex(u => u.email === user.email);
+      
+      if (userIndex !== -1) {
+        users[userIndex] = { ...users[userIndex], ...formData };
+        localStorage.setItem('users', JSON.stringify(users));
+      }
+
+      // Update userToken
+      const updatedUser = { ...user, ...formData };
+      localStorage.setItem('userToken', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+
+      alert('Profile updated successfully!');
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      alert('Failed to save profile');
+    }
+  };
+
+  if (!user) {
+    return (
+      <div className="profile">
+        <h1>My Profile</h1>
+        <p>Please log in to view your profile.</p>
+      </div>
+    );
+  }
+
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
   return (
     <div className="profile">
       <h1>My Profile</h1>
       <div className="profile-card">
         <div className="profile-header">
-          <img src="https://via.placeholder.com/100" alt="User" className="profile-avatar" />
+          <div className="profile-avatar-placeholder">
+            {getInitials(formData.name)}
+          </div>
           <div className="profile-info">
-            <h2>John Doe</h2>
-            <p>john.doe@email.com</p>
-            <p>Premium Member</p>
+            <h2>{formData.name || 'User'}</h2>
+            <p>{formData.email}</p>
+            <p>Member</p>
           </div>
         </div>
         <div className="profile-form">
           <div className="form-group">
             <label>Full Name</label>
-            <input type="text" defaultValue="John Doe" />
+            <input 
+              type="text" 
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            />
           </div>
           <div className="form-group">
             <label>Email</label>
-            <input type="email" defaultValue="john.doe@email.com" />
+            <input 
+              type="email" 
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            />
           </div>
           <div className="form-group">
             <label>Phone</label>
-            <input type="tel" defaultValue="+91 98765 43210" />
+            <input 
+              type="tel" 
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              placeholder="+91 98765 43210"
+            />
           </div>
           <div className="form-group">
             <label>City</label>
-            <input type="text" defaultValue="Mumbai" />
+            <input 
+              type="text" 
+              value={formData.city}
+              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+              placeholder="Mumbai"
+            />
           </div>
-          <button className="save-btn">Save Changes</button>
+          <button className="save-btn" onClick={handleSave}>Save Changes</button>
         </div>
       </div>
     </div>
