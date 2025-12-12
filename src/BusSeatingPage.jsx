@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FaBus, FaCalendarAlt, FaClock, FaTag, FaArrowLeft, FaCheckCircle, FaMapMarkerAlt } from 'react-icons/fa';
 import { formatSeatNumber } from './utils/seatUtils';
@@ -11,142 +11,21 @@ const BusSeatingPage = () => {
     const email = location.state?.email;
     const username = location.state?.username;
 
-    // Initialize seats with default layout
-    const initialSeats = [
+    const [seats, setSeats] = useState([
         ['available', 'boy', 'available', 'girl'],
         ['available', 'available', 'boy', 'girl'],
         ['girl', 'available', 'available', 'boy'],
         ['available', 'boy', 'girl', 'available'],
-    ];
+        ['available', 'boy', 'available', 'girl'],
+        ['available', 'boy', 'girl', 'available'],
+        ['girl', 'available', 'available', 'boy', 'available', 'boy'],
+    ]);
 
-    const [seats, setSeats] = useState(initialSeats);
     const [hoveredSeat, setHoveredSeat] = useState(null);
-
-    // Function to generate busKey (same as in bookingService)
-    const getBusKey = (bus) => {
-        if (!bus) return null;
-        if (bus.id) return bus.id;
-        
-        // Normalize date format - convert to YYYY-MM-DD if needed
-        let normalizedDate = bus.date || 'unknown';
-        if (normalizedDate !== 'unknown') {
-            try {
-                const dateObj = new Date(normalizedDate);
-                if (!isNaN(dateObj.getTime())) {
-                    normalizedDate = dateObj.toISOString().split('T')[0];
-                }
-            } catch (e) {
-                // Keep original format if conversion fails
-            }
-        }
-        
-        // Normalize time format - ensure consistent format
-        let normalizedTime = bus.time || 'unknown';
-        if (normalizedTime !== 'unknown' && normalizedTime.includes(':')) {
-            const [hours, minutes] = normalizedTime.split(':');
-            normalizedTime = `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
-        }
-        
-        return `${bus.from || 'unknown'}-${bus.to || 'unknown'}-${normalizedDate}-${normalizedTime}`;
-    };
-
-    // Get current user email
-    const getCurrentUserEmail = () => {
-        try {
-            const userToken = localStorage.getItem('userToken');
-            if (userToken) {
-                const user = JSON.parse(userToken);
-                return user.email || null;
-            }
-        } catch (e) {
-            // Ignore
-        }
-        return email || null; // Fallback to email from location state
-    };
-
-    // Load booked seats from localStorage and update seat availability
-    // Excludes seats booked by current user (so they can see their own bookings)
-    useEffect(() => {
-        if (!selectedBus) return;
-
-        const busKey = getBusKey(selectedBus);
-        if (!busKey) return;
-
-        const currentUserEmail = getCurrentUserEmail();
-
-        // Get all bookings from localStorage
-        let allBookings = [];
-        try {
-            const storedBookings = localStorage.getItem('userBookings');
-            if (storedBookings) {
-                allBookings = JSON.parse(storedBookings);
-            }
-        } catch (parseError) {
-            console.warn('Error parsing bookings from localStorage:', parseError);
-            allBookings = [];
-        }
-
-        // Filter bookings for this specific bus route (excluding cancelled and current user's bookings)
-        const busBookings = allBookings.filter(booking => {
-            const bookingBusKey = getBusKey({
-                from: booking.from,
-                to: booking.to,
-                date: booking.date,
-                time: booking.time,
-            });
-            return bookingBusKey === busKey && 
-                   booking.status !== 'Cancelled' &&
-                   booking.email !== currentUserEmail; // Exclude current user's bookings
-        });
-
-        // Create a set of booked seats from other users
-        const bookedSeatsSet = new Set();
-        busBookings.forEach(booking => {
-            if (booking.seats && Array.isArray(booking.seats)) {
-                booking.seats.forEach(seat => {
-                    if (seat.row !== undefined && seat.col !== undefined) {
-                        bookedSeatsSet.add(`${seat.row}-${seat.col}`);
-                    }
-                });
-            }
-        });
-
-        // Update seats array: mark booked seats as unavailable
-        // Preserve current seat selections and only update from initial state
-        setSeats(currentSeats => {
-            return initialSeats.map((row, rowIndex) =>
-                row.map((seat, seatIndex) => {
-                    // Preserve user's current selection
-                    const currentSeat = currentSeats[rowIndex]?.[seatIndex];
-                    if (currentSeat === 'selected') {
-                        // Only keep selection if seat is not booked by others
-                        if (bookedSeatsSet.has(`${rowIndex}-${seatIndex}`)) {
-                            return 'booked'; // Mark as booked if it was booked by another user
-                        }
-                        return 'selected'; // Keep selection
-                    }
-                    
-                    // If seat is already occupied (boy/girl), keep it as is
-                    if (seat === 'boy' || seat === 'girl') {
-                        return seat;
-                    }
-                    
-                    // Check if this seat is booked by another user
-                    if (bookedSeatsSet.has(`${rowIndex}-${seatIndex}`)) {
-                        return 'booked'; // Mark as booked
-                    }
-                    
-                    // Otherwise keep the original status (available)
-                    return seat;
-                })
-            );
-        });
-    }, [selectedBus, email]);
 
     const handleSeatClick = (rowIndex, seatIndex) => {
         const currentSeat = seats[rowIndex][seatIndex];
         // Allow clicking on available or selected seats (toggle)
-        // Don't allow clicking on booked, boy, or girl seats
         if (currentSeat === 'available' || currentSeat === 'selected') {
             const updatedSeats = seats.map((row, rIdx) =>
                 row.map((seat, sIdx) => {
@@ -217,7 +96,7 @@ const BusSeatingPage = () => {
     };
 
     // Map seats to column letters (A, B, C, D)
-    const columnLetters = ['A', 'B', 'C', 'D'];
+    const columnLetters = ['A', 'B', 'C', 'D','E','F'];
 
     return (
         <div className="bus-seating-container">
@@ -262,7 +141,7 @@ const BusSeatingPage = () => {
                                                         onMouseLeave={() => setHoveredSeat(null)}
                                                         title={seatNumber}
                                                     >
-                                                        {seat === 'selected' ? seatNumber : (seat === 'available' ? seatNumber : seat === 'booked' ? 'X' : '')}
+                                                        {seat === 'selected' ? seatNumber : (seat === 'available' ? seatNumber : '')}
                                                     </div>
                                                 );
                                             })}
@@ -288,7 +167,7 @@ const BusSeatingPage = () => {
                                                         onMouseLeave={() => setHoveredSeat(null)}
                                                         title={seatNumber}
                                                     >
-                                                        {seat === 'selected' ? seatNumber : (seat === 'available' ? seatNumber : seat === 'booked' ? 'X' : '')}
+                                                        {seat === 'selected' ? seatNumber : (seat === 'available' ? seatNumber : '')}
                                                     </div>
                                                 );
                                             })}
@@ -319,7 +198,6 @@ const BusSeatingPage = () => {
                         <div className="seat-tooltip">
                             {hoveredSeat.status === 'available' && `Available seat ${hoveredSeat.row}${hoveredSeat.letter}`}
                             {hoveredSeat.status === 'selected' && `Selected seat ${hoveredSeat.row}${hoveredSeat.letter}`}
-                            {hoveredSeat.status === 'booked' && `Booked seat ${hoveredSeat.row}${hoveredSeat.letter}`}
                             {hoveredSeat.status === 'boy' && `Occupied seat ${hoveredSeat.row}${hoveredSeat.letter}`}
                             {hoveredSeat.status === 'girl' && `Occupied seat ${hoveredSeat.row}${hoveredSeat.letter}`}
                         </div>
@@ -351,11 +229,11 @@ const BusSeatingPage = () => {
             {/* Action Buttons */}
             <div className="action-buttons">
                 <button className="back-button" onClick={() => navigate(-1)}>
-                    <FaArrowLeft style={{ marginRight: '8px' }} />
+                    <FaArrowLeft style={{ marginRight: '6px', fontSize: '11px' }} />
                     Back to Bus Details
                 </button>
                 <button className="confirm-button" onClick={handleConfirmBooking}>
-                    <FaCheckCircle style={{ marginRight: '8px' }} />
+                    <FaCheckCircle style={{ marginRight: '6px', fontSize: '11px' }} />
                     Confirm Booking
                 </button>
             </div>

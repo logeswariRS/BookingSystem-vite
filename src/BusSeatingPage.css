@@ -351,7 +351,7 @@ html, body {
 /* Bus Diagram Section */
 .bus-diagram-section {
     width: 240px;
-    background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
     border-radius: 16px;
     padding: 24px;
     display: flex;
@@ -437,28 +437,34 @@ html, body {
 /* Action Buttons */
 .action-buttons {
     background: white;
-    padding: 16px 40px;
+    padding: 12px 40px;
     display: flex;
-    gap: 12px;
-    justify-content: flex-start;
+    gap: 8px;
+    justify-content: space-between;
     align-items: center;
     border-top: 3px solid #2c3e50;
     box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+    width: 100%;
 }
 
 .back-button {
     background: white;
     color: #2c3e50;
     border: 2px solid #2c3e50;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-size: 13px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s;
     display: flex;
     align-items: center;
     box-shadow: 0 2px 6px rgba(44, 62, 80, 0.1);
+    white-space: nowrap;
+    width: auto;
+    min-width: auto;
+    max-width: fit-content;
+    margin: 0;
 }
 
 .back-button:hover {
@@ -473,15 +479,21 @@ html, body {
     background: #2c3e50;
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-size: 13px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s;
     display: flex;
     align-items: center;
     box-shadow: 0 2px 8px rgba(44, 62, 80, 0.2);
+    white-space: nowrap;
+    width: auto;
+    min-width: auto;
+    max-width: fit-content;
+    margin: 0;
+    margin-left: auto;
 }
 
 .confirm-button:hover {
