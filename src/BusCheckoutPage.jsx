@@ -1,47 +1,27 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import QRCode from "qrcode";
-import { FaBus } from 'react-icons/fa';
-import emailjs from 'emailjs-com';
+import { FaBus, FaMapMarkerAlt, FaCalendarAlt, FaClock, FaTag, FaCheckCircle, FaUser, FaTicketAlt } from 'react-icons/fa';
+import { integratedBooking, clearAllBookings } from './services/bookingService';
+import { formatSeatNumbers } from './utils/seatUtils';
 import "./BusCheckoutPage.css";
 
 function BusCheckoutPage() {
     const location = useLocation();
-    const { from, to, date, time, price, seats, email, username } = location.state;
+    const { from, to, date, time, price, seats, email, username, selectedBus } = location.state || {};
     const qrCanvasRef = useRef(null);
-
-    const sendEmail = (recipientEmail) => {
-        const templateParams = {
-            to_email: recipientEmail,
-            from_name: 'Logeswari Ravi',
-            reply_to: recipientEmail,
-            message: `Bus Ticket Details:\n
-                      Name: ${username}\n
-                      From: ${from}\n
-                      To: ${to}\n
-                      Date: ${date}\n
-                      Time: ${time}\n
-                      Price: ₹${price}\n
-                      Seat Numbers: ${seats.map(seat => `Row: ${seat.row + 1}, Col: ${seat.col + 1}`).join(", ")}`,
-        };
-    
-        emailjs.send('service_7ihtz9y', 'template_avgn90f', templateParams, 'gcqIsQDMHP1koEUWh')
-            .then((response) => {
-                console.log('Email sent successfully:', response);
-            })
-            .catch((error) => {
-                console.error('Error sending email:', error);
-                alert('Failed to send email. Please try again later.');
-            });
-    };
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [bookingStatus, setBookingStatus] = useState('');
 
     useEffect(() => {
         const generateQRCode = async () => {
             try {
+                const numberOfSeats = seats ? seats.length : 0;
+                const totalPrice = (price || 0) * numberOfSeats;
                 await QRCode.toCanvas(
                     qrCanvasRef.current,
-                    `Bus Ticket\nFrom: ${from}\nTo: ${to}\nDate: ${date}\nTime: ${time}\nPrice: ₹${price}\nSeat Numbers: ${seats.map(seat => `Row: ${seat.row + 1}, Col: ${seat.col + 1}`).join(", ")}`,
-                    { width: 150 }
+                    `Bus Ticket\nFrom: ${from}\nTo: ${to}\nDate: ${date}\nTime: ${time}\nSeats: ${numberOfSeats}\nPrice per Seat: ₹${price}\nTotal Price: ₹${totalPrice}\nSeat Numbers: ${formatSeatNumbers(seats)}`,
+                    { width: 200 }
                 );
             } catch (err) {
                 console.error("Failed to generate QR code:", err);
@@ -52,93 +32,204 @@ function BusCheckoutPage() {
     }, [from, to, date, time, price, seats]);
 
     const handleConfirmBooking = async () => {
-        const formattedDate = new Date(date).toISOString().slice(0, 19).replace('T', ' ');
-    
-      
+        if (!from || !to || !date || !time || !price || !seats || !email || !username) {
+            alert('Missing booking information. Please go back and try again.');
+            return;
+        }
+
+        // Validate that we have a selectedBus
+        if (!selectedBus) {
+            alert('Bus information is missing. Please go back and select a bus again.');
+            return;
+        }
+
+        setIsProcessing(true);
+        setBookingStatus('🔄 Processing your booking...');
+
         try {
-            const response = await fetch('http://localhost:5000/api/bookings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: username,   
-                    email,           
-                    from,             
-                    to,               
-                    date: formattedDate,  
-                    time,             
-                    price,            
-                    seats,        
-                }),
+            // Ensure selectedBus has all required fields
+            const busData = {
+                ...selectedBus,
+                from: selectedBus.from || from,
+                to: selectedBus.to || to,
+                date: selectedBus.date || date,
+                time: selectedBus.time || time,
+                price: selectedBus.price || price,
+            };
+
+            const result = await integratedBooking({
+                source: from,
+                destination: to,
+                date,
+                email,
+                username,
+                selectedBus: busData,
+                selectedSeats: seats,
             });
-    
-            if (response.ok) {
-                console.log('Booking saved successfully to the database');
+
+            if (result.success && result.booking) {
+                setBookingStatus('✅ Booking confirmed! Email sent successfully.');
+            } else if (result.success) {
+                setBookingStatus('✅ Booking processed. Email sent.');
             } else {
-                console.error('Failed to save booking to the database');
+                setBookingStatus(`❌ ${result.message || 'Booking failed. Email notification sent.'}`);
             }
         } catch (error) {
-            console.error('Error while saving booking to the database:', error);
+            console.error('Error in booking:', error);
+            setBookingStatus('❌ An error occurred. Please try again.');
+        } finally {
+            setIsProcessing(false);
         }
-    
-       
-        sendEmail(email); 
     };
     
- 
-    const seatNumbers = seats.map((seat, index) => {
-        return `Row: ${seat.row + 1}, Col: ${seat.col + 1}`;
-    }).join(", ");
-
+    const seatNumbers = formatSeatNumbers(seats);
+    const numberOfSeats = seats ? seats.length : 0;
+    const seatPrice = price || 0;
+    const totalPrice = seatPrice * numberOfSeats;
 
     return (
-<div className="checkout-page">
-
-    <div className="checkout-container">
-    <div className="thank-you-message">
-            <h1>Thank you, {username}!</h1>
-        </div>
-        <div className="details-card">
-            <div className="top-section">
-                <h2>Booking Details</h2>
-            </div>
-           
-            <div className="bus-info">
-                <span className="from">{from}</span>
-                <FaBus className="bus-icon" />
-                <span className="to">{to}</span>
-            </div>
-            <div className="details">
-            <div className="details-column left">
-                    <p><strong>From:</strong> {from}</p>
-                    <p><strong>Date:</strong> {date}</p>
-                    <p><strong>Price:</strong> ₹{price}</p>
-                    
+        <div className="checkout-page">
+            <div className="checkout-container">
+                {/* Header Section */}
+                <div className="checkout-header">
+                    <div className="header-icon">
+                        <FaTicketAlt />
+                    </div>
+                    <h1 className="checkout-title">Booking Confirmation</h1>
+                    <p className="checkout-subtitle">Review your booking details before confirming</p>
                 </div>
-                <div className="details-column right">
-                    <p><strong>To:</strong> {to}</p>
-                    <p><strong>Time:</strong> {time}</p>
-                    
-                    <p><strong>Seat Numbers:</strong> {seatNumbers || 'Not Selected'}</p>
+
+                {/* Main Content */}
+                <div className="checkout-content">
+                    {/* Journey Details Card */}
+                    <div className="journey-card">
+                        <div className="card-header">
+                            <FaBus className="card-icon" />
+                            <h2>Journey Details</h2>
+                        </div>
+                        <div className="route-display">
+                            <div className="route-point">
+                                <FaMapMarkerAlt className="route-icon from-icon" />
+                                <div className="route-info">
+                                    <span className="route-label">From</span>
+                                    <span className="route-city">{from}</span>
+                                </div>
+                            </div>
+                            <div className="route-line">
+                                <FaBus />
+                            </div>
+                            <div className="route-point">
+                                <FaMapMarkerAlt className="route-icon to-icon" />
+                                <div className="route-info">
+                                    <span className="route-label">To</span>
+                                    <span className="route-city">{to}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Booking Information Card */}
+                    <div className="info-card">
+                        <div className="card-header">
+                            <FaUser className="card-icon" />
+                            <h2>Booking Information</h2>
+                        </div>
+                        <div className="info-grid">
+                            <div className="info-item">
+                                <FaCalendarAlt className="info-icon" />
+                                <div className="info-content">
+                                    <span className="info-label">Date</span>
+                                    <span className="info-value">{date}</span>
+                                </div>
+                            </div>
+                            <div className="info-item">
+                                <FaClock className="info-icon" />
+                                <div className="info-content">
+                                    <span className="info-label">Time</span>
+                                    <span className="info-value">{time}</span>
+                                </div>
+                            </div>
+                            <div className="info-item">
+                                <FaUser className="info-icon" />
+                                <div className="info-content">
+                                    <span className="info-label">Passenger</span>
+                                    <span className="info-value">{username}</span>
+                                </div>
+                            </div>
+                            <div className="info-item">
+                                <FaTicketAlt className="info-icon" />
+                                <div className="info-content">
+                                    <span className="info-label">Seats</span>
+                                    <span className="info-value">{seatNumbers || 'Not Selected'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Price Summary Card */}
+                    <div className="price-card">
+                        <div className="card-header">
+                            <FaTag className="card-icon" />
+                            <h2>Price Summary</h2>
+                        </div>
+                        <div className="price-details">
+                            <div className="price-row">
+                                <span className="price-label">Price per Seat</span>
+                                <span className="price-value">₹{seatPrice}</span>
+                            </div>
+                            <div className="price-row">
+                                <span className="price-label">Number of Seats</span>
+                                <span className="price-value">{numberOfSeats}</span>
+                            </div>
+                            <div className="price-divider"></div>
+                            <div className="price-row total">
+                                <span className="price-label">Total Amount</span>
+                                <span className="price-value">₹{totalPrice}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* QR Code Section */}
+                    <div className="qr-card">
+                        <div className="card-header">
+                            <FaTicketAlt className="card-icon" />
+                            <h2>Digital Ticket</h2>
+                        </div>
+                        <div className="qr-container">
+                            <canvas id="qr-code" ref={qrCanvasRef}></canvas>
+                            <p className="qr-caption">Scan QR code to access your ticket</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Action Section */}
+                <div className="action-section">
+                    {bookingStatus && (
+                        <div className={`booking-status ${bookingStatus.includes('✅') ? 'success' : bookingStatus.includes('❌') ? 'error' : 'info'}`}>
+                            {bookingStatus}
+                        </div>
+                    )}
+                    <button 
+                        className="confirm-button" 
+                        onClick={handleConfirmBooking}
+                        disabled={isProcessing}
+                    >
+                        {isProcessing ? (
+                            <>
+                                <span className="spinner"></span>
+                                Processing...
+                            </>
+                        ) : (
+                            <>
+                                <FaCheckCircle />
+                                Confirm Booking & Send Email
+                            </>
+                        )}
+                    </button>
                 </div>
             </div>
-            <div className="qr-section">
-                <canvas id="qr-code" ref={qrCanvasRef}></canvas>
-                <p className="qr-caption">Scan this QR code to access ticket details</p>
-            </div>
         </div>
-        <div className="email-section">
-            <button className="confirm-button" onClick={handleConfirmBooking}>
-                Confirm Booking and Send Email
-            </button>
-        </div>
-    </div>
-</div>
-
-
     );
 }
 
 export default BusCheckoutPage;
-

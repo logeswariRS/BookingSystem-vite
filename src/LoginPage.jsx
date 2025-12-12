@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import './LoginPage.css';
 
 const LoginPage = () => {
@@ -15,17 +14,30 @@ const LoginPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
         try {
-            const response = await axios.post('http://localhost:5000/login', formData);
-            console.log('Login successful:', response.data);
-            alert(response.data.message);
-            navigate('/busbookingpage'); // Redirect after successful login
-        } catch (error) {
-            if (error.response && error.response.data) {
-                setError(error.response.data.message);
+            // Get users from localStorage
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            
+            // Find user by email and password
+            const user = users.find(u => u.email === formData.email && u.password === formData.password);
+            
+            if (user) {
+                // Set current user as logged in
+                localStorage.setItem('userToken', JSON.stringify({
+                    id: user.id,
+                    name: user.name,
+                    email: user.email
+                }));
+                
+                alert('Login successful!');
+                navigate('/dashboard'); // Redirect to dashboard after successful login
             } else {
-                setError('An error occurred. Please try again.');
+                setError('Invalid email or password');
             }
+        } catch (error) {
+            setError('An error occurred. Please try again.');
+            console.error('Login error:', error);
         }
     };
 
@@ -59,6 +71,12 @@ const LoginPage = () => {
                     {error && <p className="error-message">{error}</p>}
                     <button type="submit" className="login-buttonn">Login</button>
                 </form>
+                <div className="signup-link">
+                    <p>Don't have an account?</p>
+                    <button type="button" onClick={() => navigate('/signup')}>
+                        Sign Up
+                    </button>
+                </div>
             </div>
         </div>
     );

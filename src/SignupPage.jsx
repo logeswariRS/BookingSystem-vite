@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import './SignUpPage.css'; // Ensure you have the necessary CSS for styling
+import './SignupPage.css'; // Ensure you have the necessary CSS for styling
 
 const SignUpPage = () => {
     const [formData, setFormData] = useState({
@@ -27,22 +27,41 @@ const SignUpPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-       
+        // Validate passwords match
         if (formData.password === formData.confirmPassword) {
             try {
-                const response = await axios.post('http://localhost:5000/signup', {
+                // Store user data in localStorage (demo purposes)
+                const users = JSON.parse(localStorage.getItem('users') || '[]');
+                
+                // Check if email already exists
+                const emailExists = users.some(user => user.email === formData.email);
+                if (emailExists) {
+                    alert('This email is already registered. Please use a different email.');
+                    return;
+                }
+                
+                // Add new user
+                users.push({
+                    id: Date.now(),
                     name: formData.name,
                     email: formData.email,
-                    password: formData.password,
+                    password: formData.password // Note: Never store plain passwords in production!
                 });
+                
+                // Save to localStorage
+                localStorage.setItem('users', JSON.stringify(users));
+                
+                // Set current user as logged in
+                localStorage.setItem('userToken', JSON.stringify({
+                    id: users[users.length - 1].id,
+                    name: formData.name,
+                    email: formData.email
+                }));
+                
                 alert('User registered successfully!');
-                navigate('/busbookingpage');
+                navigate('/dashboard');
             } catch (error) {
-                if (error.response?.data?.code === 'ER_DUP_ENTRY') {
-                    alert('This email is already registered. Please use a different email.');
-                } else {
-                    alert('There was an error registering the user. Please try again later.');
-                }
+                alert('There was an error registering the user. Please try again later.');
                 console.error('Error registering the user:', error);
             }
             
